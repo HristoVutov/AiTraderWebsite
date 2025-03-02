@@ -1,53 +1,99 @@
-import React, { useRef, useState, useEffect } from "react";
-import Header from "../common/Header";
-import axios from "axios";
+import React from "react";
+import { 
+  DetailsList, 
+  SelectionMode, 
+  DetailsListLayoutMode,
+  Text,
+  Stack,
+  mergeStyleSets
+} from '@fluentui/react';
 
+// Styles for the component
+const styles = mergeStyleSets({
+  container: {
+    margin: '20px 0',
+  },
+  header: {
+    margin: '0 0 20px 0',
+  }
+});
 
 // Component for displaying strategies in a table
 const StrategiesTable = ({ strategies }) => {
-    if (!strategies || strategies.length === 0) {
-        return (
-            <div className="mt-4">
-                <h2>Strategies</h2>
-                <p>No strategies found.</p>
-            </div>
-        );
-    }
-
+  if (!strategies || strategies.length === 0) {
     return (
-        <div className="mt-4">
-            <h2>Strategies</h2>
-            <table className="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>URL</th>
-                        <th>Parameters</th>
-                        <th>Skip Checks</th>
-                        <th>Created At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {strategies.map((strategy) => {
-                        const id = strategy._id.$oid || strategy._id;
-                        const createdAt = strategy.createdAt && strategy.createdAt.$date
-                            ? new Date(parseInt(strategy.createdAt.$date.$numberLong)).toLocaleDateString()
-                            : "N/A";
-                            
-                        return (
-                            <tr key={id}>
-                                <td>{strategy.Name}</td>
-                                <td>{strategy.Url}</td>
-                                <td>{strategy.Parameters}</td>
-                                <td>{strategy.SkipChecksTakeTrade ? "Yes" : "No"}</td>
-                                <td>{createdAt}</td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
-        </div>
+      <Stack className={styles.container}>
+        <Text variant="xLarge" className={styles.header}>Strategies</Text>
+        <Text>No strategies found.</Text>
+      </Stack>
     );
+  }
+
+  // Define columns for DetailsList
+  const columns = [
+    {
+      key: 'name',
+      name: 'Name',
+      fieldName: 'Name',
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
+      key: 'url',
+      name: 'URL',
+      fieldName: 'Url',
+      minWidth: 150,
+      maxWidth: 300,
+      isResizable: true,
+    },
+    {
+      key: 'parameters',
+      name: 'Parameters',
+      fieldName: 'Parameters',
+      minWidth: 150,
+      maxWidth: 300,
+      isResizable: true,
+    },
+    {
+      key: 'skipChecks',
+      name: 'Skip Checks',
+      fieldName: 'SkipChecksTakeTrade',
+      minWidth: 100,
+      maxWidth: 120,
+      isResizable: true,
+      onRender: (item) => (
+        <span>{item.SkipChecksTakeTrade ? "Yes" : "No"}</span>
+      )
+    },
+    {
+      key: 'createdAt',
+      name: 'Created At',
+      minWidth: 100,
+      maxWidth: 150,
+      isResizable: true,
+      onRender: (item) => {
+        const createdAt = item.createdAt && item.createdAt.$date
+          ? new Date(parseInt(item.createdAt.$date.$numberLong)).toLocaleDateString()
+          : "N/A";
+        return <span>{createdAt}</span>;
+      }
+    }
+  ];
+
+  return (
+    <Stack className={styles.container}>
+      <Text variant="xLarge" className={styles.header}>Strategies</Text>
+      <DetailsList
+        items={strategies}
+        columns={columns}
+        selectionMode={SelectionMode.none}
+        layoutMode={DetailsListLayoutMode.justified}
+        isHeaderVisible={true}
+        getKey={(item) => item._id.$oid || item._id}
+      />
+    </Stack>
+  );
 };
 
 export default StrategiesTable;

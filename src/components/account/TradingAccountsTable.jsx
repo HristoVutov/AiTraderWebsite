@@ -1,51 +1,87 @@
-import React, { useRef, useState, useEffect } from "react";
-import Header from "../common/Header";
-import axios from "axios";
+import React from "react";
+import { 
+  DetailsList, 
+  SelectionMode, 
+  DetailsListLayoutMode,
+  Text,
+  Stack,
+  mergeStyleSets
+} from '@fluentui/react';
+
+// Styles for the component
+const styles = mergeStyleSets({
+  container: {
+    margin: '20px 0',
+  },
+  header: {
+    margin: '0 0 20px 0',
+  }
+});
 
 // Component for displaying trading accounts in a table
 const TradingAccountsTable = ({ accounts }) => {
-    if (!accounts || accounts.length === 0) {
-        return (
-            <div className="mt-4">
-                <h2>Trading Accounts</h2>
-                <p>No trading accounts found.</p>
-            </div>
-        );
-    }
-
+  if (!accounts || accounts.length === 0) {
     return (
-        <div className="mt-4">
-            <h2>Trading Accounts</h2>
-            <table className="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Strategies</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {accounts.map((account) => (
-                        <tr key={account._id.$oid || account._id}>
-                            <td>{account.Name}</td>
-                            <td>
-                                {account.Strategies && account.Strategies.map((strategy, index) => {
-                                    // Handle different strategy data formats
-                                    const strategyName = strategy.Name || 
-                                        (typeof strategy === 'object' && strategy.$oid ? strategy.$oid : strategy);
-                                    return (
-                                        <span key={index}>
-                                            {strategyName}
-                                            {index < account.Strategies.length - 1 ? ', ' : ''}
-                                        </span>
-                                    );
-                                })}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+      <Stack className={styles.container}>
+        <Text variant="xLarge" className={styles.header}>Trading Accounts</Text>
+        <Text>No trading accounts found.</Text>
+      </Stack>
     );
+  }
+
+  // Define columns for DetailsList
+  const columns = [
+    {
+      key: 'name',
+      name: 'Name',
+      fieldName: 'Name',
+      minWidth: 100,
+      maxWidth: 200,
+      isResizable: true,
+    },
+    {
+      key: 'strategies',
+      name: 'Strategies',
+      fieldName: 'Strategies',
+      minWidth: 200,
+      maxWidth: 500,
+      isResizable: true,
+      onRender: (item) => {
+        if (!item.Strategies || item.Strategies.length === 0) {
+          return <span>No strategies</span>;
+        }
+        
+        return (
+          <span>
+            {item.Strategies.map((strategy, index) => {
+              // Handle different strategy data formats
+              const strategyName = strategy.Name || 
+                (typeof strategy === 'object' && strategy.$oid ? strategy.$oid : strategy);
+              return (
+                <span key={index}>
+                  {strategyName}
+                  {index < item.Strategies.length - 1 ? ', ' : ''}
+                </span>
+              );
+            })}
+          </span>
+        );
+      }
+    }
+  ];
+
+  return (
+    <Stack className={styles.container}>
+      <Text variant="xLarge" className={styles.header}>Trading Accounts</Text>
+      <DetailsList
+        items={accounts}
+        columns={columns}
+        selectionMode={SelectionMode.none}
+        layoutMode={DetailsListLayoutMode.justified}
+        isHeaderVisible={true}
+      />
+    </Stack>
+  );
 };
 
 export default TradingAccountsTable;
