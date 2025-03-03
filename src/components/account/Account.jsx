@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
 import Header from "../common/Header";
 import axios from "axios";
-import { Stack, Separator, initializeIcons } from '@fluentui/react';
+import { Stack, initializeIcons } from '@fluentui/react';
 import CreateTradingAccountForm from "./CreateTradingAccountForm";
 import TradingAccountsTable from "./TradingAccountsTable";
+import AssignStrategiesModal from "./AssignStrategiesModal";
 
 // Initialize FluentUI icons
 initializeIcons();
 
 const Account = () => {
     const [accounts, setAccounts] = useState([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedAccount, setSelectedAccount] = useState(null);
 
     useEffect(() => {
         fetchAccounts();
@@ -27,6 +30,22 @@ const Account = () => {
     const handleAccountCreated = (newAccount) => {
         setAccounts([...accounts, newAccount]);
     };
+    
+    const handleAccountSelected = (account) => {
+        console.log("Account selected:", account);
+        setSelectedAccount(account);
+        setIsModalOpen(true);
+    };
+    
+    const handleModalDismiss = () => {
+        setIsModalOpen(false);
+        setSelectedAccount(null);
+    };
+    
+    const handleStrategiesAssigned = () => {
+        // Refresh the accounts list after strategies are assigned
+        fetchAccounts();
+    };
 
     return (
         <>
@@ -38,10 +57,22 @@ const Account = () => {
                     </Stack.Item>
                     
                     <Stack.Item grow={2} styles={{ root: { margin: '10px', minWidth: '500px' } }}>
-                        <TradingAccountsTable accounts={accounts} />
+                        <TradingAccountsTable 
+                            accounts={accounts} 
+                            onAccountSelected={handleAccountSelected}
+                        />
                     </Stack.Item>
                 </Stack>
             </Stack>
+            
+            {selectedAccount && (
+                <AssignStrategiesModal
+                    isOpen={isModalOpen}
+                    onDismiss={handleModalDismiss}
+                    selectedAccount={selectedAccount}
+                    onStrategiesAssigned={handleStrategiesAssigned}
+                />
+            )}
         </>
     );
 };

@@ -5,6 +5,7 @@ import { ThemeProvider, initializeIcons } from '@fluentui/react';
 import Home from "./components/home/Home";
 import Account from "./components/account/Account";
 import Strategy from "./components/strategy/Strategy";
+import TradesPage from "./components/trade/AccountTrades";
 
 // Initialize FluentUI icons
 initializeIcons();
@@ -31,6 +32,7 @@ function App() {
         <Route exact path="/" component={Home} />      
         <Route path="/accounts" component={Account} />        
         <Route path="/strategies" component={Strategy} />
+        <Route path="/trades/tradingAccount/:id" component={TradesPage} />
       </Switch>
     </ThemeProvider>
   );

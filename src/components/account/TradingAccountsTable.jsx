@@ -5,8 +5,10 @@ import {
   DetailsListLayoutMode,
   Text,
   Stack,
-  mergeStyleSets
+  mergeStyleSets,
+  IconButton
 } from '@fluentui/react';
+import { useHistory } from 'react-router-dom';
 
 // Styles for the component
 const styles = mergeStyleSets({
@@ -20,6 +22,8 @@ const styles = mergeStyleSets({
 
 // Component for displaying trading accounts in a table
 const TradingAccountsTable = ({ accounts }) => {
+  const history = useHistory();
+
   if (!accounts || accounts.length === 0) {
     return (
       <Stack className={styles.container}>
@@ -67,6 +71,22 @@ const TradingAccountsTable = ({ accounts }) => {
           </span>
         );
       }
+    },
+    {
+      key: 'trades',
+      name: 'Trades',
+      minWidth: 70,
+      maxWidth: 100,
+      isResizable: false,
+      onRender: (item) => (
+        <IconButton
+          iconProps={{ iconName: 'AllCurrency' }}
+          title="View Trades"
+          ariaLabel="View Trades"
+          onClick={() => history.push(`/trades/tradingAccount/${item._id}`)}
+          styles={{ root: { color: '#0078d4' } }}
+        />
+      )
     }
   ];
 
