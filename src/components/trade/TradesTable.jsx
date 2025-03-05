@@ -1,4 +1,5 @@
 import React from "react";
+import { useHistory } from "react-router-dom";
 import { 
   DetailsList, 
   SelectionMode, 
@@ -58,23 +59,10 @@ const formatDate = (dateString) => {
   return date.toLocaleString();
 };
 
-// Custom row rendering to add conditional formatting
-const onRenderRow = (props) => {
-  const customStyles = {};
-  
-  if (props.item.Status === 'completed') {
-    if (props.item.Outcome === 'win' || props.item.Profitloss > 0) {
-      customStyles.root = { backgroundColor: '#e6ffe6' }; // Light green for winning trades
-    } else if (props.item.Outcome === 'loss' || props.item.Profitloss < 0) {
-      customStyles.root = { backgroundColor: '#fff0f0' }; // Light red for losing trades
-    }
-  }
-  
-  return <DetailsRow {...props} styles={customStyles} />;
-};
-
 // Component for displaying trades in a table
 const TradesTable = ({ trades, pagination, onPageChange }) => {
+  const history = useHistory();
+  
   if (!trades || trades.length === 0) {
     return (
       <Stack className={styles.container}>
@@ -83,6 +71,21 @@ const TradesTable = ({ trades, pagination, onPageChange }) => {
       </Stack>
     );
   }
+
+  // Custom row rendering to add conditional formatting
+  const onRenderRow = (props) => {
+    const customStyles = {};
+    
+    if (props.item.Status === 'completed') {
+      if (props.item.Outcome === 'win' || props.item.Profitloss > 0) {
+        customStyles.root = { backgroundColor: '#e6ffe6' }; // Light green for winning trades
+      } else if (props.item.Outcome === 'loss' || props.item.Profitloss < 0) {
+        customStyles.root = { backgroundColor: '#fff0f0' }; // Light red for losing trades
+      }
+    }
+    
+    return <DetailsRow {...props} styles={customStyles} />;
+  };
 
   // Define columns for DetailsList
   const columns = [
@@ -195,6 +198,22 @@ const TradesTable = ({ trades, pagination, onPageChange }) => {
       maxWidth: 200,
       isResizable: true,
       onRender: (item) => <span>{formatDate(item.EntryTime)}</span>
+    },
+    {
+      key: 'chart',
+      name: 'Chart',
+      minWidth: 50,
+      maxWidth: 70,
+      isResizable: false,
+      onRender: (item) => (
+        <IconButton
+          iconProps={{ iconName: 'BarChartVertical' }}
+          title="View Chart"
+          ariaLabel="View Chart"
+          onClick={() => history.push(`/trades/${item._id}/chart`)}
+          styles={{ root: { color: '#0078d4' } }}
+        />
+      )
     }
   ];
 
