@@ -6,7 +6,8 @@ import {
   Text,
   Stack,
   mergeStyleSets,
-  DetailsRow
+  DetailsRow,
+  IconButton
 } from '@fluentui/react';
 
 // Styles for the component
@@ -31,6 +32,22 @@ const styles = mergeStyleSets({
   },
   pending: {
     color: 'orange',
+  },
+  paginationContainer: {
+    marginTop: '20px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paginationInfo: {
+    margin: '0 10px',
+    fontSize: '14px',
+  },
+  pageButton: {
+    minWidth: '32px',
+    height: '32px',
+    padding: '0',
+    margin: '0 2px',
   }
 });
 
@@ -57,7 +74,7 @@ const onRenderRow = (props) => {
 };
 
 // Component for displaying trades in a table
-const TradesTable = ({ trades }) => {
+const TradesTable = ({ trades, pagination, onPageChange }) => {
   if (!trades || trades.length === 0) {
     return (
       <Stack className={styles.container}>
@@ -181,9 +198,46 @@ const TradesTable = ({ trades }) => {
     }
   ];
 
+  // Render pagination controls
+  const renderPagination = () => {
+    if (!pagination || pagination.totalPages <= 1) {
+      return null;
+    }
+
+    const { currentPage, totalPages, hasNextPage, hasPrevPage } = pagination;
+
+    return (
+      <div className={styles.paginationContainer}>
+        <IconButton
+          iconProps={{ iconName: 'ChevronLeft' }}
+          title="Previous Page"
+          ariaLabel="Previous Page"
+          disabled={!hasPrevPage}
+          onClick={() => onPageChange(currentPage - 1)}
+          className={styles.pageButton}
+        />
+
+        <span className={styles.paginationInfo}>
+          Page {currentPage} of {totalPages} ({pagination.total} total trades)
+        </span>
+
+        <IconButton
+          iconProps={{ iconName: 'ChevronRight' }}
+          title="Next Page"
+          ariaLabel="Next Page"
+          disabled={!hasNextPage}
+          onClick={() => onPageChange(currentPage + 1)}
+          className={styles.pageButton}
+        />
+      </div>
+    );
+  };
+
   return (
     <Stack className={styles.container}>
-      <Text variant="xLarge" className={styles.header}>Trades</Text>
+      <Text variant="xLarge" className={styles.header}>
+        Trades
+      </Text>
       <DetailsList
         items={trades}
         columns={columns}
@@ -192,6 +246,8 @@ const TradesTable = ({ trades }) => {
         isHeaderVisible={true}
         onRenderRow={onRenderRow}
       />
+      
+      {renderPagination()}
     </Stack>
   );
 };

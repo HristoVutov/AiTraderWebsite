@@ -55,10 +55,15 @@ const styles = mergeStyleSets({
   statLabel: {
     fontSize: '14px',
     color: '#666',
+  },
+  paginationNote: {
+    fontSize: '14px',
+    color: '#666',
+    marginTop: '5px',
   }
 });
 
-const TradesSummary = ({ trades, account }) => {
+const TradesSummary = ({ trades, account, pagination }) => {
   // Calculate summary statistics
   const summary = useMemo(() => {
     if (!trades || trades.length === 0) {
@@ -75,7 +80,7 @@ const TradesSummary = ({ trades, account }) => {
     }
     trades = trades.filter(trade => trade != null)
     const completedTrades = trades.filter(trade => trade.Status === 'completed');
-    const pendingTrades = trades.filter(trade => trade.Status === 'pending');
+    const pendingTrades = trades.filter(trade => trade.Status === 'pending' || trade.Status === 'open');
     const winningTrades = completedTrades.filter(trade => 
       trade.Outcome === 'win' || trade.Profitloss > 0
     );
@@ -92,7 +97,8 @@ const TradesSummary = ({ trades, account }) => {
       : 0;
 
     return {
-      totalTrades: trades.length,
+      totalTrades: pagination ? pagination.total : trades.length,
+      displayedTrades: trades.length,
       completedTrades: completedTrades.length,
       pendingTrades: pendingTrades.length,
       winningTrades: winningTrades.length,
@@ -101,7 +107,7 @@ const TradesSummary = ({ trades, account }) => {
       totalProfit,
       averageProfitPerTrade,
     };
-  }, [trades]);
+  }, [trades, pagination]);
 
   return (
     <Stack className={styles.container}>
@@ -109,6 +115,11 @@ const TradesSummary = ({ trades, account }) => {
         <Text variant="xLarge">
           {account ? `Trading Summary for ${account.Name}` : 'Trading Summary'}
         </Text>
+        {pagination && pagination.totalPages > 1 && (
+          <Text className={styles.paginationNote}>
+            Showing page {pagination.currentPage} of {pagination.totalPages} ({summary.displayedTrades} out of {pagination.total} trades)
+          </Text>
+        )}
       </Stack.Item>
       
       <Stack horizontal wrap tokens={{ childrenGap: 16 }} className={styles.cardsContainer}>
@@ -190,6 +201,12 @@ const TradesSummary = ({ trades, account }) => {
           <Text className={styles.statLabel}>Avg Profit per Trade</Text>
         </Stack>
       </Stack>
+      
+      {pagination && pagination.totalPages > 1 && (
+        <Text className={styles.paginationNote} style={{ marginTop: '20px', textAlign: 'center' }}>
+          * Note: Trade statistics (except Total Trades) reflect only the trades shown on the current page.
+        </Text>
+      )}
     </Stack>
   );
 };

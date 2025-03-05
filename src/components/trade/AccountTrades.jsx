@@ -12,30 +12,41 @@ const AccountTrades = () => {
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState(null);
 
   useEffect(() => {
-    const fetchTradesData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch account details
-        const accountResponse = await axios.get(`http://localhost:3001/api/tradingAccount/${id}`);
-        setAccount(accountResponse.data);
-        
-        // Fetch trades for this account
-        const tradesResponse = await axios.get(`http://localhost:3001/api/tradingAccount/${id}/trades`);
-        setTrades(tradesResponse.data);
-        
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching trades data:", err);
-        setError("Failed to load trades. Please try again later.");
-        setLoading(false);
-      }
-    };
-
-    fetchTradesData();
+    fetchTradesData(1); // Start with page 1
   }, [id]);
+
+  const fetchTradesData = async (page = 1) => {
+    try {
+      setLoading(true);
+      
+      // Fetch account details
+      const accountResponse = await axios.get(`http://localhost:3001/api/tradingAccount/${id}`);
+      setAccount(accountResponse.data);
+      
+      // Fetch trades for this account with pagination
+      const tradesResponse = await axios.get(`http://localhost:3001/api/tradingAccount/${id}/trades`, {
+        params: {
+          page,
+          limit: 20
+        }
+      });
+      
+      setTrades(tradesResponse.data.trades || []);
+      setPagination(tradesResponse.data.pagination || null);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching trades data:", err);
+      setError("Failed to load trades. Please try again later.");
+      setLoading(false);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    fetchTradesData(newPage);
+  };
 
   return (
     <>
@@ -50,10 +61,18 @@ const AccountTrades = () => {
         ) : (
           <Stack tokens={{ childrenGap: 20 }}>
             <Stack.Item>
-              <TradesSummary trades={trades} account={account} />
+              <TradesSummary 
+                trades={trades} 
+                account={account} 
+                pagination={pagination} 
+              />
             </Stack.Item>
             <Stack.Item>
-              <TradesTable trades={trades} />
+              <TradesTable 
+                trades={trades} 
+                pagination={pagination}
+                onPageChange={handlePageChange}
+              />
             </Stack.Item>
           </Stack>
         )}
