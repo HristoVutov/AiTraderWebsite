@@ -73,7 +73,7 @@ const TradesSummary = ({ trades, account }) => {
         averageProfitPerTrade: 0,
       };
     }
-
+    trades = trades.filter(trade => trade != null)
     const completedTrades = trades.filter(trade => trade.Status === 'completed');
     const pendingTrades = trades.filter(trade => trade.Status === 'pending');
     const winningTrades = completedTrades.filter(trade => 

@@ -6,6 +6,7 @@ import Home from "./components/home/Home";
 import Account from "./components/account/Account";
 import Strategy from "./components/strategy/Strategy";
 import TradesPage from "./components/trade/AccountTrades";
+import TradeChart from "./components/trade/TradeChart";
 
 // Initialize FluentUI icons
 initializeIcons();
@@ -33,6 +34,7 @@ function App() {
         <Route path="/accounts" component={Account} />        
         <Route path="/strategies" component={Strategy} />
         <Route path="/trades/tradingAccount/:id" component={TradesPage} />
+        <Route path="/trades/:tradeId/chart" component={TradeChart} />
       </Switch>
     </ThemeProvider>
   );
