@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { createChart, LineSeries } from 'lightweight-charts';
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useHistory } from "react-router-dom";
+import { createChart, ColorType,CandlestickSeries,LineSeries } from 'lightweight-charts';
 import axios from "axios";
 import {
   Stack,
@@ -20,10 +20,17 @@ import Header from "../common/Header";
 
 const TradeChart = () => {
   const { tradeId } = useParams();
+  const history = useHistory();
+  const chartContainerRef = useRef(null);
+  
+  // State variables
   const [indicatorData, setIndicatorData] = useState(null);
+  const [trade, setTrade] = useState(null);
+  const [candleData, setCandleData] = useState([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [chartInstance, setChartInstance] = useState(null);
 
   // Styles for the component
   const styles = mergeStyleSets({
@@ -87,49 +94,90 @@ const TradeChart = () => {
     chartPlaceholder: {
       textAlign: 'center',
       padding: '20px',
+    },
+    tradeDetails: {
+      padding: '16px',
+      marginBottom: '20px',
+      backgroundColor: 'white',
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      borderRadius: '2px',
+    },
+    tradeHeader: {
+      fontWeight: 'bold',
+      marginBottom: '8px',
+    },
+    entryLine: {
+      color: '#0078d4',
+    },
+    stopLossLine: {
+      color: 'red',
+    },
+    targetLine: {
+      color: 'green',
     }
   });
 
-  useEffect(() => {
-    const fetchIndicatorData = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`http://localhost:3001/api/indicatorData/${tradeId}`);
-        // We expect the response to be an array, but we'll handle just the first item
-        setIndicatorData(response.data.length > 0 ? response.data[0] : null);
-        setLoading(false);
-
-        const chart = createChart('chartTV');
-        const lineSeries = chart.addSeries(LineSeries);
-        lineSeries.setData([
-            { time: '2019-04-11', value: 80.01 },
-            { time: '2019-04-12', value: 96.63 },
-            { time: '2019-04-13', value: 76.64 },
-            { time: '2019-04-14', value: 81.89 },
-            { time: '2019-04-15', value: 74.43 },
-            { time: '2019-04-16', value: 80.01 },
-            { time: '2019-04-17', value: 96.63 },
-            { time: '2019-04-18', value: 76.64 },
-            { time: '2019-04-19', value: 81.89 },
-            { time: '2019-04-20', value: 74.43 },
-        ]);
-      } catch (err) {
-        console.error("Error fetching indicator data:", err);
-        setError("Failed to load indicator data. Please try again later.");
-        setLoading(false);
+  // Fetch the trade data and candle data
+  const fetchTradeData = async () => {
+    try {
+      // First get the trade details to get the OrderTicket
+      const tradeResponse = await axios.get(`http://localhost:3001/api/trade/${tradeId}`);
+      const tradeData = tradeResponse.data;
+      setTrade(tradeData);
+      
+      // Then get the candle data using the OrderTicket
+      if (tradeData.OrderTicket) {
+        const candleResponse = await axios.get(`http://localhost:3001/api/csv/${tradeData.OrderTicket}`);
+        const formattedCandleData = formatCandleData(candleResponse.data);
+        setCandleData(formattedCandleData);
+      } else {
+        throw new Error("No OrderTicket available for this trade");
       }
-    };
+    } catch (err) {
+      console.error("Error fetching trade or candle data:", err);
+      setError("Failed to load trade data. Please try again later.");
+      throw err;
+    }
+  };
 
-    fetchIndicatorData();
-  }, [tradeId]);
+  // Format candle data for the chart
+  const formatCandleData = (data) => {
+    // This function will need to be adjusted based on the actual format of your CSV data
+    // Assuming the data is an array of objects with time, open, high, low, close properties
+    
+    // If the data comes as CSV, you'll need to parse it here
+    // For now, assuming it's already parsed into an array of objects
+    
+    return data.map(candle => ({
+      time: new Date(candle.time).getTime() / 1000,
+      open: parseFloat(candle.open),
+      high: parseFloat(candle.high),
+      low: parseFloat(candle.low),
+      close: parseFloat(candle.close),
+      volume: parseFloat(candle.volume || 0)
+    }));
+  };
 
+  // Fetch indicator data
+  const fetchIndicatorData = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/indicatorData/${tradeId}`);
+      setIndicatorData(response.data.length > 0 ? response.data[0] : null);
+    } catch (err) {
+      console.error("Error fetching indicator data:", err);
+      setError("Failed to load indicator data. Please try again later.");
+      throw err;
+    }
+  };
+
+  // Toggle expanded state for the indicator data panel
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
 
   // Function to get color for result type
   const getResultColor = (result) => {
-    switch (result.toLowerCase()) {
+    switch (result?.toLowerCase()) {
       case 'long':
         return styles.positive;
       case 'short':
@@ -139,7 +187,98 @@ const TradeChart = () => {
     }
   };
 
-  // Column definitions for the data table
+  // Initialize the chart with data
+  const initializeChart = () => {
+    if (!chartContainerRef.current || candleData.length === 0 || !trade) return;
+    
+    // Clear any existing chart
+    if (chartContainerRef.current.innerHTML !== '') {
+      chartContainerRef.current.innerHTML = '';
+    }
+    
+    // Create new chart
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { color: '#ffffff' },
+        textColor: '#333',
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+    
+    // Add candlestick series
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#26a69a',
+      downColor: '#ef5350',
+      borderVisible: false,
+      wickUpColor: '#26a69a',
+      wickDownColor: '#ef5350',
+  });
+    
+    // Set the data
+    candlestickSeries.setData(candleData);
+    
+    // Add entry, stop loss, and target price lines
+    if (trade.Entry) {
+      const entryLine = chart.addLineSeries({
+        color: '#0078d4',
+        lineWidth: 2,
+        lineStyle: 1, // Solid line
+        title: 'Entry',
+      });
+      entryLine.setData(candleData.map(d => ({ time: d.time, value: trade.Entry })));
+    }
+    
+    if (trade.StopLoss) {
+      const stopLossLine = chart.addLineSeries({
+        color: 'red',
+        lineWidth: 2,
+        lineStyle: 2, // Dashed line
+        title: 'Stop Loss',
+      });
+      stopLossLine.setData(candleData.map(d => ({ time: d.time, value: trade.StopLoss })));
+    }
+    
+    if (trade.Target) {
+      const targetLine = chart.addLineSeries({
+        color: 'green',
+        lineWidth: 2,
+        lineStyle: 2, // Dashed line
+        title: 'Target',
+      });
+      targetLine.setData(candleData.map(d => ({ time: d.time, value: trade.Target })));
+    }
+    
+    // Fit content and set up resize handler
+    chart.timeScale().fitContent();
+    
+    // Store chart instance for cleanup
+    setChartInstance(chart);
+    
+    // Add resize listener
+    const resizeHandler = () => {
+      if (chartContainerRef.current && chart) {
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        });
+      }
+    };
+    
+    window.addEventListener('resize', resizeHandler);
+    
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('resize', resizeHandler);
+      chart.remove();
+    };
+  };
+
+  // Column definitions for the indicator data table
   const columns = [
     {
       key: 'time',
@@ -163,8 +302,8 @@ const TradeChart = () => {
           <span 
             className={getResultColor(item.result).root} 
             style={{ 
-              backgroundColor: item.result.toLowerCase() === 'long' ? 'green' : 
-                item.result.toLowerCase() === 'short' ? 'red' : 'blue',
+              backgroundColor: item.result?.toLowerCase() === 'long' ? 'green' : 
+                item.result?.toLowerCase() === 'short' ? 'red' : 'blue',
               ...styles.resultIndicator
             }} 
           />
@@ -178,9 +317,43 @@ const TradeChart = () => {
       fieldName: 'rsi',
       minWidth: 70,
       isResizable: true,
-      onRender: (item) => <span>{item.rsi.toFixed(2)}</span>
+      onRender: (item) => <span>{item.rsi?.toFixed(2) || 'N/A'}</span>
     }
   ];
+
+  // Fetch data when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        await fetchTradeData();
+        await fetchIndicatorData();
+      } catch (err) {
+        console.error("Error in data fetching:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+    
+    // Cleanup function
+    return () => {
+      if (chartInstance) {
+        chartInstance.remove();
+      }
+    };
+  }, [tradeId]);
+
+  // Initialize chart when data is loaded
+  useEffect(() => {
+    if (!loading && candleData.length > 0 && trade) {
+      const cleanup = initializeChart();
+      return cleanup;
+    }
+  }, [loading, candleData, trade]);
 
   return (
     <>
@@ -195,14 +368,57 @@ const TradeChart = () => {
         ) : (
           <>
             {/* Main Chart Container */}
-            <div className={styles.chartContainer}>z
-              <div id="chartTV" style={{ width: '100%', height: '100%' }}>
-            
+            <div className={styles.chartContainer}>
+              <div ref={chartContainerRef} id="chartTV" style={{ width: '100%', height: '100%' }}>
+                {!candleData.length && (
+                  <div className={styles.chartPlaceholder}>
+                    <Text>No chart data available for this trade.</Text>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Side Panel */}
             <div className={styles.sidePanel}>
+              {/* Trade Details Section */}
+              {trade && (
+                <Stack className={styles.tradeDetails}>
+                  <Text variant="large" className={styles.tradeHeader}>Trade Details</Text>
+                  <Stack tokens={{ childrenGap: 8 }}>
+                    <Text className={styles.dataItem}>
+                      <strong>Pair:</strong> {trade.Pair}
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>Status:</strong> {trade.Status}
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>Outcome:</strong> {trade.Outcome}
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>Entry:</strong> <span className={styles.entryLine.root}>{Number(trade.Entry).toFixed(5)}</span>
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>Stop Loss:</strong> <span className={styles.stopLossLine.root}>{Number(trade.StopLoss).toFixed(5)}</span>
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>Target:</strong> <span className={styles.targetLine.root}>{Number(trade.Target).toFixed(5)}</span>
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>Risk/Reward:</strong> {Number(trade.RiskReward).toFixed(2)}
+                    </Text>
+                    <Text className={styles.dataItem}>
+                      <strong>P/L:</strong> <span style={{ 
+                        color: Number(trade.Profitloss) > 0 ? 'green' : 
+                               Number(trade.Profitloss) < 0 ? 'red' : 'inherit'
+                      }}>
+                        {Number(trade.Profitloss).toFixed(2)}
+                      </span>
+                    </Text>
+                  </Stack>
+                </Stack>
+              )}
+
+              {/* Indicator Data Section */}
               {indicatorData && (
                 <Stack className={styles.cardContainer}>
                   <Stack 
@@ -229,15 +445,15 @@ const TradeChart = () => {
                         </span>
                       </Text>
                       <Text className={styles.dataItem}>
-                        Data Points: {indicatorData.Data.length}
+                        Data Points: {indicatorData.Data?.length || 0}
                       </Text>
-                      {indicatorData.Data.length > 0 && (
+                      {indicatorData.Data?.length > 0 && (
                         <Text className={styles.dataItem}>
                           Last Result: 
                           <span 
                             style={{ 
-                              color: indicatorData.Data[indicatorData.Data.length - 1].result.toLowerCase() === 'long' ? 'green' : 
-                                indicatorData.Data[indicatorData.Data.length - 1].result.toLowerCase() === 'short' ? 'red' : 'blue' 
+                              color: indicatorData.Data[indicatorData.Data.length - 1].result?.toLowerCase() === 'long' ? 'green' : 
+                                indicatorData.Data[indicatorData.Data.length - 1].result?.toLowerCase() === 'short' ? 'red' : 'blue' 
                             }}
                           >
                             {` ${indicatorData.Data[indicatorData.Data.length - 1].result}`}
@@ -248,7 +464,7 @@ const TradeChart = () => {
                   </Stack>
 
                   {/* Expanded content */}
-                  {isExpanded && (
+                  {isExpanded && indicatorData.Data?.length > 0 && (
                     <Stack className={styles.cardContent}>
                       <Text variant="medium" style={{ marginBottom: '10px' }}>
                         Detailed Data:
@@ -265,6 +481,14 @@ const TradeChart = () => {
                   )}
                 </Stack>
               )}
+              
+              {/* Back button */}
+              <DefaultButton
+                text="Back to Trades"
+                iconProps={{ iconName: 'ChevronLeft' }}
+                onClick={() => history.goBack()}
+                styles={{ root: { marginTop: '20px' } }}
+              />
             </div>
           </>
         )}
