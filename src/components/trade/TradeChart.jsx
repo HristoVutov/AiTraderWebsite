@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useHistory } from "react-router-dom";
-import { createChart, ColorType,CandlestickSeries,LineSeries } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries, LineSeries } from 'lightweight-charts';
 import axios from "axios";
 import {
   Stack,
@@ -217,14 +217,14 @@ const TradeChart = () => {
       borderVisible: false,
       wickUpColor: '#26a69a',
       wickDownColor: '#ef5350',
-  });
+    });
     
     // Set the data
     candlestickSeries.setData(candleData);
     
     // Add entry, stop loss, and target price lines
     if (trade.Entry) {
-      const entryLine = chart.addLineSeries({
+      const entryLine = chart.addSeries(LineSeries, {
         color: '#0078d4',
         lineWidth: 2,
         lineStyle: 1, // Solid line
@@ -234,7 +234,7 @@ const TradeChart = () => {
     }
     
     if (trade.StopLoss) {
-      const stopLossLine = chart.addLineSeries({
+      const stopLossLine = chart.addSeries(LineSeries, {
         color: 'red',
         lineWidth: 2,
         lineStyle: 2, // Dashed line
@@ -244,7 +244,7 @@ const TradeChart = () => {
     }
     
     if (trade.Target) {
-      const targetLine = chart.addLineSeries({
+      const targetLine = chart.addSeries(LineSeries, {
         color: 'green',
         lineWidth: 2,
         lineStyle: 2, // Dashed line
