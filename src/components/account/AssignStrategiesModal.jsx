@@ -49,7 +49,7 @@ const AssignStrategiesModal = ({ isOpen, onDismiss, selectedAccount, onStrategie
       const existingIds = selectedAccount.strategyIds 
         ? selectedAccount.strategyIds.split(',').filter(id => id.trim() !== '')
         : [];
-      
+      console.log("existingIds",existingIds)
       setExistingStrategyIds(existingIds);
       setSelectedStrategyIds(existingIds);
     }

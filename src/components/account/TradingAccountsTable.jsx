@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   DetailsList, 
   SelectionMode, 
@@ -6,7 +6,8 @@ import {
   Text,
   Stack,
   mergeStyleSets,
-  IconButton
+  IconButton,
+  Selection
 } from '@fluentui/react';
 import { useHistory } from 'react-router-dom';
 
@@ -17,12 +18,16 @@ const styles = mergeStyleSets({
   },
   header: {
     margin: '0 0 20px 0',
+  },
+  row: {
+    cursor: 'pointer',
   }
 });
 
 // Component for displaying trading accounts in a table
-const TradingAccountsTable = ({ accounts }) => {
+const TradingAccountsTable = ({ accounts, onAccountSelected }) => {
   const history = useHistory();
+  const [selectedItems, setSelectedItems] = useState([]);
 
   if (!accounts || accounts.length === 0) {
     return (
@@ -32,6 +37,19 @@ const TradingAccountsTable = ({ accounts }) => {
       </Stack>
     );
   }
+
+  // Initialize selection object
+  const selection = new Selection({
+    onSelectionChanged: () => {
+      const selectedItems = selection.getSelection();
+      setSelectedItems(selectedItems);
+      
+      // Call the parent's onAccountSelected if provided and if there's a selection
+      if (onAccountSelected && selectedItems.length > 0) {
+        onAccountSelected(selectedItems[0]);
+      }
+    },
+  });
 
   // Define columns for DetailsList
   const columns = [
@@ -83,7 +101,11 @@ const TradingAccountsTable = ({ accounts }) => {
           iconProps={{ iconName: 'AllCurrency' }}
           title="View Trades"
           ariaLabel="View Trades"
-          onClick={() => history.push(`/trades/tradingAccount/${item._id}`)}
+          onClick={(e) => {
+            // Stop propagation to prevent row selection when clicking the button
+            e.stopPropagation();
+            history.push(`/trades/tradingAccount/${item._id}`);
+          }}
           styles={{ root: { color: '#0078d4' } }}
         />
       )
@@ -96,9 +118,16 @@ const TradingAccountsTable = ({ accounts }) => {
       <DetailsList
         items={accounts}
         columns={columns}
-        selectionMode={SelectionMode.none}
+        selectionMode={SelectionMode.single}
+        selection={selection}
         layoutMode={DetailsListLayoutMode.justified}
         isHeaderVisible={true}
+        onItemInvoked={(item) => {
+          if (onAccountSelected) {
+            onAccountSelected(item);
+          }
+        }}
+        styles={{ root: { selectors: { '.ms-DetailsRow': styles.row }}}}
       />
     </Stack>
   );
